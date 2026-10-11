@@ -12,9 +12,7 @@ class Node(ABC):
     """
     Base class expected by qpump.core and NodeGraph.
 
-    Subclasses may implement either:
-    - compute(inputs), which is called by execute(), or
-    - execute(inputs) directly, for backward compatibility.
+    Subclasses implement compute(inputs), and execute(inputs) bridges to it.
     """
 
     def __init__(
@@ -34,7 +32,7 @@ class Node(ABC):
     def compute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Override this method in subclasses that use the compute interface."""
         raise NotImplementedError(
-            f"{self.__class__.__name__} must implement compute() or execute()."
+            f"{self.__class__.__name__} must implement compute()."
         )
 
     def __repr__(self) -> str:
@@ -48,14 +46,20 @@ BaseNode = Node
 class PassthroughNode(Node):
     """A baseline node that relays its inputs directly to outputs."""
 
-    def execute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    def compute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         return dict(inputs)
+
+    def execute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        return self.compute(inputs)
 
 
 class PlaceholderNode(Node):
     """A placeholder for uncalibrated or stubbed pipeline stages."""
 
-    def execute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    def compute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         result = dict(inputs)
         result["status"] = "placeholder_executed"
         return result
+
+    def execute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        return self.compute(inputs)
