@@ -8,6 +8,7 @@ from qpump.nodes.effective_metric_source import EffectiveMetricSourceNode
 from qpump.nodes.gravitational_curvature import GravitationalCurvatureNode
 from qpump.nodes.quantum_backreaction import QuantumBackreactionNode
 from qpump.nodes.z_axis_filter_queue import ZAxisFilterQueueNode
+from qpump.nodes.optical_phase_step import OpticalPhaseStepNode
 
 NODE_REGISTRY: Dict[str, Type[Node]] = {
     "peristaltic_pump": PeristalticPumpNode,
@@ -18,6 +19,8 @@ NODE_REGISTRY: Dict[str, Type[Node]] = {
     "gravitational_curvature": GravitationalCurvatureNode,
     "quantum_backreaction": QuantumBackreactionNode,
     "z_axis_filter_queue": ZAxisFilterQueueNode,
+    "OpticalPhaseStepNode": OpticalPhaseStepNode,
+
 }
 
 def get_node_class(node_type: str) -> Type[Node]:
