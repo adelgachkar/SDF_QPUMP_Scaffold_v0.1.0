@@ -1,16 +1,5 @@
 """
-Q-PUMP: Quantum Peristaltic Pump & Boundary Stress Dynamics framework.
+SDF QPUMP Scaffold Package
 """
 
-from .nodes.base import Node, BaseNode, PassthroughNode, PlaceholderNode
-from .registry import create_node, register_node, registered_types
-
-__all__ = [
-    "Node",
-    "BaseNode",
-    "PassthroughNode",
-    "PlaceholderNode",
-    "create_node",
-    "register_node",
-    "registered_types",
-]
+__version__ = "0.1.0"
