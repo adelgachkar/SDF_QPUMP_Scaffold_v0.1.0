@@ -8,7 +8,7 @@ modeling spherical divergence, geometric attenuation, and radial flux density.
 from typing import Any, Dict, List
 import numpy as np
 
-from qpump.nodes.base import Node
+from src.nodes.base import Node
 
 
 class RadialPropagationNode(Node):

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from qpump.nodes.optical_phase_step import OpticalPhaseStepNode
+from src.nodes.optical_phase_step import OpticalPhaseStepNode
 
 
 def test_optical_phase_step_single_packet():

@@ -1,9 +1,9 @@
 """Tests for the Q-PUMP scaffold nodes pipeline."""
 
-from qpump.nodes.cavity_resonator import CavityResonatorNode
-from qpump.nodes.berry_torque_bridge import BerryTorqueBridgeNode
-from qpump.nodes.peristaltic_pump import PeristalticPumpNode
-from qpump.nodes.boundary_stress_integrator import BoundaryStressIntegratorNode
+from src.nodes.cavity_resonator import CavityResonatorNode
+from src.nodes.berry_torque_bridge import BerryTorqueBridgeNode
+from src.nodes.peristaltic_pump import PeristalticPumpNode
+from src.nodes.boundary_stress_integrator import BoundaryStressIntegratorNode
 
 
 def test_qpump_pipeline_flow():

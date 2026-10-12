@@ -8,7 +8,7 @@ propagating through the effective cavity medium.
 from typing import Any, Dict, List
 import numpy as np
 
-from qpump.nodes.base import Node
+from src.nodes.base import Node
 
 
 class OpticalPhaseStepNode(Node):

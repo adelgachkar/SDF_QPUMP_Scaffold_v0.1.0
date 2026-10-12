@@ -8,8 +8,8 @@ torque generated during parametric pumping cycles.
 from typing import Any, Dict
 import numpy as np
 
-from qpump.nodes.base import Node
-from qpump.quantum_geometry import (
+from src.nodes.base import Node
+from src.quantum_geometry import (
     geometric_torque_from_berry,
     dykhne_davis_pechukas_transition_rate,
 )

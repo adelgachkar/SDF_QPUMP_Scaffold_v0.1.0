@@ -5,7 +5,7 @@ Unit tests for ZAxisFilterQueueNode in Q-PUMP pipeline.
 import numpy as np
 import pytest
 
-from qpump.nodes.z_axis_filter_queue import ZAxisFilterQueueNode
+from src.nodes.z_axis_filter_queue import ZAxisFilterQueueNode
 
 
 def test_z_axis_filter_queue_basic_execution():

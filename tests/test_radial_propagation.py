@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from qpump.nodes.radial_propagation import RadialPropagationNode
+from src.nodes.radial_propagation import RadialPropagationNode
 
 
 def test_radial_propagation_single_packet():
@@ -32,7 +32,7 @@ def test_radial_propagation_single_packet():
 
 
 def test_radial_propagation_chain_from_optical_step():
-    from qpump.nodes.optical_phase_step import OpticalPhaseStepNode
+    from src.nodes.optical_phase_step import OpticalPhaseStepNode
 
     opt_node = OpticalPhaseStepNode(node_id="opt")
     rad_node = RadialPropagationNode(node_id="rad")

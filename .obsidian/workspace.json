@@ -187,17 +187,17 @@
   },
   "active": "d08fef660de8a15e",
   "lastOpenFiles": [
-    "tests/__pycache__/test_qpump_nodes.cpython-312-pytest-9.1.1.pyc",
-    "tests/__pycache__/test_curvature_pipeline.cpython-312-pytest-9.1.1.pyc",
-    "qpump/__pycache__/__init__.cpython-312.pyc",
-    "qpump/__pycache__/registry.cpython-312.pyc",
-    "qpump/__pycache__/core.cpython-312.pyc",
-    "qpump/__pycache__",
-    "qpump/nodes/__pycache__/__init__.cpython-312.pyc",
-    "qpump/nodes/__pycache__/quantum_backreaction.cpython-312.pyc",
-    "qpump/nodes/__pycache__/peristaltic_pump.cpython-312.pyc",
-    "qpump/nodes/__pycache__/gravitational_curvature.cpython-312.pyc",
-    "qpump/nodes/__pycache__/cavity_resonator.cpython-312.pyc",
+    "src/z_axis_filter_queue.py",
+    "src/nodes/__pycache__/effective_metric_source.cpython-312.pyc",
+    "src/nodes/__pycache__/__init__.cpython-312.pyc",
+    "src/nodes/__pycache__/z_axis_filter_queue.cpython-312.pyc",
+    "src/nodes/__pycache__/radial_propagation.cpython-312.pyc",
+    "src/nodes/__pycache__/quantum_backreaction.cpython-312.pyc",
+    "src/nodes/__pycache__/peristaltic_pump.cpython-312.pyc",
+    "src/nodes/__pycache__/optical_phase_step.cpython-312.pyc",
+    "src/nodes/__pycache__/gravitational_curvature.cpython-312.pyc",
+    "src/nodes/__pycache__/cavity_resonator.cpython-312.pyc",
+    "src/nodes/__pycache__/boundary_stress_integrator.cpython-312.pyc",
     "docs/02_Open_Calibration_Checklist.md"
   ]
 }

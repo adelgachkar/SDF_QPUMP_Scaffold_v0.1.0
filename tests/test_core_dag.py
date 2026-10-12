@@ -1,6 +1,6 @@
 import unittest
-from qpump.core import Graph
-from qpump.nodes.base import Node
+from src.core import Graph
+from src.nodes.base import Node
 class AddNode(Node):
     type_name="add_test"
     def compute(self, inputs): return {"out": inputs.get("x",0)+inputs.get("y",0)}

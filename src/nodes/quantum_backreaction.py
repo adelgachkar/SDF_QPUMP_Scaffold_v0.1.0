@@ -1,6 +1,6 @@
 from typing import Any, Dict
 import math
-from qpump.nodes.base import BaseNode
+from src.nodes.base import BaseNode
 
 
 class QuantumBackreactionNode(BaseNode):

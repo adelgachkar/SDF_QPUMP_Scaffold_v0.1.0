@@ -7,7 +7,7 @@ based on boundary impedance and logistic beam stabilization.
 from typing import Any, Dict, List, Optional
 import numpy as np
 
-from qpump.nodes.base import Node
+from src.nodes.base import Node
 
 
 class ZAxisFilterQueueNode(Node):

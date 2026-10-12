@@ -1,9 +1,9 @@
 import math
 import pytest
-from qpump.quantum_geometry import QuantumGeometryEngine
-from qpump.core import Graph
-from qpump.nodes.base import PassthroughNode
-from qpump.engine import TimeSteppedPipelineRunner
+from src.quantum_geometry import QuantumGeometryEngine
+from src.core import Graph
+from src.nodes.base import PassthroughNode
+from src.engine import TimeSteppedPipelineRunner
 
 
 def test_berry_curvature_monopole_symmetry():

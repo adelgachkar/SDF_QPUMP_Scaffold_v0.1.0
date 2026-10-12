@@ -2,11 +2,11 @@
 
 import pytest
 import math
-from qpump.core import Graph
-from qpump.nodes.peristaltic_pump import PeristalticPumpNode
-from qpump.nodes.cavity_resonator import CavityResonatorNode
-from qpump.nodes.berry_torque_bridge import BerryTorqueBridgeNode
-from qpump.nodes.boundary_stress_integrator import BoundaryStressIntegratorNode
+from src.core import Graph
+from src.nodes.peristaltic_pump import PeristalticPumpNode
+from src.nodes.cavity_resonator import CavityResonatorNode
+from src.nodes.berry_torque_bridge import BerryTorqueBridgeNode
+from src.nodes.boundary_stress_integrator import BoundaryStressIntegratorNode
 
 
 class TestPhase3CavityStressPipeline:

@@ -5,7 +5,7 @@ Perturbs Minkowski metric via boundary stress and evaluates MOND regime.
 """
 
 from typing import Any, Dict, List
-from qpump.nodes.base import PlaceholderNode
+from src.nodes.base import PlaceholderNode
 
 
 class EffectiveMetricSourceNode(PlaceholderNode):
