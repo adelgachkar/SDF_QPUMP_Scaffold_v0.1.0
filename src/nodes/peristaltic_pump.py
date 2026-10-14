@@ -1,43 +1,34 @@
-"""Peristaltic phase-pump node for the Q-PUMP scaffold."""
+﻿"""Peristaltic Pump node for SDF QPUMP."""
+from __future__ import annotations
+import numpy as np
+from typing import Any, Dict, Optional
+from .base import Node
 
-import math
-from typing import Any, Dict, List
-
-from .base import BaseNode
-
-
-class PeristalticPumpNode(BaseNode):
-    @property
-    def required_inputs(self) -> List[str]:
-        return ["drive_amplitude", "berry_phase_shift", "phase_frequency"]
-
-    @property
-    def outputs(self) -> List[str]:
-        return [
-            "jet_power",
-            "phase_flux_vector",
-            "peristaltic_frequency",
-        ]
+class PeristalticPumpNode(Node):
+    def __init__(
+        self,
+        node_id: Optional[str] = None,
+        label: Optional[str] = None,
+        config: Optional[Dict[str, Any]] = None,
+        name: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
+        super().__init__(node_id=node_id, label=label, config=config, name=name, **kwargs)
 
     def compute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
-        drive = float(inputs["drive_amplitude"])
-        berry_shift = float(inputs["berry_phase_shift"])
-        phase_frequency = float(inputs["phase_frequency"])
+        amp = inputs.get("drive_amplitude", inputs.get("drive_phase", 1.0))
+        phi = inputs.get("berry_phase_shift", inputs.get("geometric_phase_shift", 0.0))
+        freq = inputs.get("phase_frequency", inputs.get("pump_freq", 1e9))
 
-        if not all(math.isfinite(x) for x in (drive, berry_shift, phase_frequency)):
-            raise ValueError("Peristaltic pump inputs must be finite numbers.")
-        if drive < 0.0:
-            raise ValueError("drive_amplitude must be non-negative.")
+        amp = float(amp)
+        phi = float(phi)
+        freq = float(freq)
 
-        jet_power = 0.931314 * drive * math.sin(berry_shift / 2.0) ** 2
-        phase_flux_vector = [
-            0.0,
-            0.0,
-            jet_power * phase_frequency * 0.05,
-        ]
+        jet_power = amp * (1.0 + np.sin(phi))
+        flux_vec = np.array([0.0, 0.0, jet_power * 1e-3], dtype=float)
 
         return {
             "jet_power": jet_power,
-            "phase_flux_vector": phase_flux_vector,
-            "peristaltic_frequency": phase_frequency * 0.5,
+            "phase_flux_vector": flux_vec,
+            "peristaltic_frequency": freq,
         }

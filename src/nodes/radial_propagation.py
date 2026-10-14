@@ -1,112 +1,83 @@
 """
-Radial Propagation Engine Node
-Step 13 in the physical-computational framework:
-Propagates phase-stepped quantum packets along the radial direction r_hat,
-modeling spherical divergence, geometric attenuation, and radial flux density.
+Step 13: Radial Propagation Node.
+Simulates outward wavefront propagation and geometric attenuation.
 """
-
+from __future__ import annotations
+import math
 from typing import Any, Dict, List
-import numpy as np
-
 from src.nodes.base import Node
 
 
 class RadialPropagationNode(Node):
-    """
-    Executes radial transport along r_hat:
-      r_new = r_old + delta_r
-      A_new = A_old * (r_old / r_new)^alpha_div * exp(-gamma_loss * delta_r)
-      phi_new = (phi_old + k_radial * delta_r) % (2 * pi)
-      J_r = (A_new ** 2) * k_radial (radial probability/wave flux)
-    """
-
     def __init__(
         self,
-        node_id: str = "radial_propagation",
+        node_id: str = "radial_propagation_01",
         delta_r: float = 0.1,
         k_radial: float = 1.0,
         alpha_div: float = 0.5,
-        gamma_loss: float = 0.02,
-        r_min: float = 0.05,
+        gamma_loss: float = 0.0,
+        r_min: float = 0.1,
+        name: str | None = None,
     ):
-        super().__init__(node_id=node_id)
+        super().__init__(node_id=node_id, name=name)
         self.delta_r = float(delta_r)
         self.k_radial = float(k_radial)
         self.alpha_div = float(alpha_div)
         self.gamma_loss = float(gamma_loss)
         self.r_min = float(r_min)
 
-    def propagate_packet(self, packet: Dict[str, Any], delta_r_override: float = None) -> Dict[str, Any]:
-        dr = self.delta_r if delta_r_override is None else float(delta_r_override)
+    def _propagate_single(self, pkt: Dict[str, Any]) -> Dict[str, Any]:
+        p = dict(pkt)
+        r = float(p.get("r", p.get("radius", self.r_min)))
+        r_curr = max(r, self.r_min)
+        amp = float(p.get("amplitude", 1.0))
+        phase = float(p.get("phase", 0.0))
 
-        if "r" in packet:
-            r_current = max(self.r_min, float(packet["r"]))
-        elif all(k in packet for k in ("x", "y", "z")):
-            x, y, z = float(packet["x"]), float(packet["y"]), float(packet["z"])
-            r_current = max(self.r_min, float(np.sqrt(x**2 + y**2 + z**2)))
-        else:
-            r_current = 1.0
+        r_next = r_curr + self.delta_r
+        geom = (r_curr / r_next) ** self.alpha_div
+        loss = math.exp(-self.gamma_loss * self.delta_r)
+        amp_next = amp * geom * loss
+        phase_next = (phase + self.k_radial * self.delta_r) % (2.0 * math.pi)
 
-        r_new = r_current + dr
+        p["r"] = r_next
+        p["radius"] = r_next
+        p["amplitude"] = amp_next
+        p["phase"] = phase_next
+        p["radial_propagated"] = True
+        return p
 
-        amp_in = float(packet.get("amplitude", 1.0))
-        phase_in = float(packet.get("phase", 0.0))
+    def compute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        # Handle queue input or piped list from optical step (queue or stepped_packets)
+        packet_list = None
+        if "queue" in inputs and isinstance(inputs["queue"], list):
+            packet_list = inputs["queue"]
+        elif "stepped_packets" in inputs and isinstance(inputs["stepped_packets"], list):
+            packet_list = inputs["stepped_packets"]
 
-        # Geometric divergence and absorption attenuation
-        geom_factor = (r_current / r_new) ** self.alpha_div
-        loss_factor = np.exp(-self.gamma_loss * dr)
-        amp_out = amp_in * geom_factor * loss_factor
+        if packet_list is not None:
+            processed = [self._propagate_single(pkt) for pkt in packet_list]
+            total_flux = sum(float(p.get("amplitude", 0.0)) ** 2 for p in processed)
+            return {
+                "queue": processed,
+                "propagated_packets": processed,
+                "packet_count": len(processed),
+                "total_radial_flux": total_flux,
+                "status": "radial_propagation_complete"
+            }
 
-        # Radial wavevector phase evolution
-        dphi_r = self.k_radial * dr
-        phase_out = (phase_in + dphi_r) % (2.0 * np.pi)
-
-        # Complex state psi and radial flux current J_r
-        psi_out = amp_out * np.exp(1j * phase_out)
-        j_radial = (amp_out ** 2) * self.k_radial
-
-        out_packet = dict(packet)
-        out_packet["r_initial"] = r_current
-        out_packet["r"] = float(r_new)
-        out_packet["delta_r"] = dr
-        out_packet["amplitude"] = float(amp_out)
-        out_packet["phase"] = float(phase_out)
-        out_packet["psi_real"] = float(psi_out.real)
-        out_packet["psi_imag"] = float(psi_out.imag)
-        out_packet["radial_flux_jr"] = float(j_radial)
-        out_packet["radial_propagated"] = True
-
-        return out_packet
-
-    def execute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
-        raw_packets = inputs.get(
-            "stepped_packets",
-            inputs.get("queue", inputs.get("packets", None)),
-        )
-        dr_mod = inputs.get("delta_r", None)
-
-        results: List[Dict[str, Any]] = []
-
-        if raw_packets is not None:
-            if isinstance(raw_packets, list):
-                for pkt in raw_packets:
-                    if isinstance(pkt, dict):
-                        results.append(self.propagate_packet(pkt, delta_r_override=dr_mod))
-            elif isinstance(raw_packets, dict):
-                results.append(self.propagate_packet(raw_packets, delta_r_override=dr_mod))
-        elif "packet" in inputs and isinstance(inputs["packet"], dict):
-            results.append(self.propagate_packet(inputs["packet"], delta_r_override=dr_mod))
-        else:
-            default_pkt = {"amplitude": 1.0, "phase": 0.0, "r": 1.0}
-            results.append(self.propagate_packet(default_pkt, delta_r_override=dr_mod))
-
-        total_flux = sum(p["radial_flux_jr"] for p in results) if results else 0.0
-        mean_r = (sum(p["r"] for p in results) / len(results)) if results else 0.0
-
+        # Handle single packet
+        pkt = inputs.get("packet", inputs)
+        propagated = self._propagate_single(pkt)
+        amp = float(propagated.get("amplitude", 0.0))
+        total_flux = amp ** 2
         return {
-            "propagated_packets": results,
-            "packet_count": len(results),
-            "total_radial_flux": float(total_flux),
-            "mean_radius": float(mean_r),
-            "status": "radial_propagation_complete",
+            "r": propagated.get("r"),
+            "radius": propagated.get("radius"),
+            "amplitude": propagated.get("amplitude"),
+            "phase": propagated.get("phase"),
+            "packet": propagated,
+            "propagated_packets": [propagated],
+            "packet_count": 1,
+            "total_radial_flux": total_flux,
+            "status": "radial_propagation_complete"
         }

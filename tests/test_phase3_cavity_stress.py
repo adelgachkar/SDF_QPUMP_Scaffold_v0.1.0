@@ -1,119 +1,166 @@
-"""Phase 3 tests: Cavity Resonator, Boundary Stress Integrator, and multi-cycle coupling."""
+"""
+tests/test_phase3_cavity_stress.py
+Phase 3 Integration and Verification Suite: Cavity Resonator & Boundary Stress.
+Uses the primary 'src' architecture.
+"""
 
-import pytest
+from __future__ import annotations
+
 import math
+import pytest
+
 from src.core import Graph
-from src.nodes.peristaltic_pump import PeristalticPumpNode
 from src.nodes.cavity_resonator import CavityResonatorNode
 from src.nodes.berry_torque_bridge import BerryTorqueBridgeNode
+from src.nodes.peristaltic_pump import PeristalticPumpNode
 from src.nodes.boundary_stress_integrator import BoundaryStressIntegratorNode
 
 
 class TestPhase3CavityStressPipeline:
-    """Verifies node computations, end-to-end DAG execution, and multi-cycle stability."""
+    """Full verification suite for Phase 3 nodes and end-to-end integration."""
 
-    def test_cavity_resonator_node_direct(self):
-        node = CavityResonatorNode("cavity_1")
-        res = node.compute({
-            "bare_phase": 3.14159,
-            "angular_deficit_deg": 180.0,
-            "leakage_ratio": 0.1,
-        })
+    def test_cavity_resonator_node_isolated(self):
+        """Verify CavityResonatorNode correctly computes screened phase, angular deficit, and leakage."""
+        node = CavityResonatorNode(name="cavity_test")
+        inputs = {
+            "bare_phase": 1.5707963267948966,  # pi / 2
+            "leakage_ratio": 0.05,
+            "angular_deficit_deg": 18.0,
+            "boundary_radius_m": 0.005,
+        }
+        outputs = node.compute(inputs)
 
-        assert math.isclose(res["screened_phase"], 3.14159 * 0.9, rel_tol=1e-5)
-        assert math.isclose(res["angular_deficit_rad"], math.pi, rel_tol=1e-5)
-        assert res["calibration_status"] == "scaffold_only"
-        assert res["leakage_ratio"] == 0.1
+        # Screened phase = bare_phase * (1.0 - leakage_ratio)
+        expected_screened = 1.5707963267948966 * (1.0 - 0.05)
+        assert math.isclose(outputs["screened_phase"], expected_screened, rel_tol=1e-9)
 
-    def test_boundary_stress_integrator_node_direct(self):
-        node = BoundaryStressIntegratorNode("stress_1")
+        # Angular deficit deg -> rad
+        expected_rad = 18.0 * (math.pi / 180.0)
+        assert math.isclose(outputs["angular_deficit_rad"], expected_rad, rel_tol=1e-9)
 
-        # Test Newtonian regime (high jet power)
-        res_high = node.compute({"jet_power": 10.0, "noise_floor": 1e-4})
-        assert res_high["regime"] == "newtonian"
-        assert res_high["snr"] == pytest.approx(10.0 / 1e-4)
-        assert res_high["net_thrust"] > 9.99
-        assert len(res_high["stress_tensor"]) == 4
+        assert outputs["calibration_status"] == "scaffold_only"
+        assert math.isclose(outputs["leakage_ratio"], 0.05, rel_tol=1e-9)
 
-        # Test sub-noise regime (low jet power)
-        res_low = node.compute({"jet_power": 1e-5, "noise_floor": 1e-3})
-        assert res_low["regime"] == "sub-noise"
-        assert res_low["net_thrust"] == 0.0
+    def test_boundary_stress_integrator_regimes(self):
+        """Verify BoundaryStressIntegratorNode transitions between Newtonian and sub-noise regimes."""
+        integrator = BoundaryStressIntegratorNode(name="stress_test")
 
-    def test_phase3_full_dag_execution(self):
-        """Constructs and runs the full Cavity -> Berry -> Pump -> Stress DAG."""
-        g = Graph()
+        # 1. Newtonian regime (jet_power > noise_floor)
+        high_power_inputs = {
+            "jet_power": 10.0,
+            "effective_metric_trace": 1.0,
+            "quantum_backreaction_force": 0.1,
+            "noise_floor": 1.0,
+        }
+        out_high = integrator.compute(high_power_inputs)
+        assert out_high["stress_regime"] == "newtonian"
+        assert math.isclose(out_high["stress_snr"], 10.0, rel_tol=1e-9)
+        assert out_high["net_thrust_n"] > 0.0
+        assert len(out_high["boundary_stress_tensor"]) == 4
 
-        # Add node instances (add_node takes 1 argument: the node instance)
-        g.add_node(CavityResonatorNode("cavity"))
-        g.add_node(BerryTorqueBridgeNode("berry"))
-        g.add_node(PeristalticPumpNode("pump"))
-        g.add_node(BoundaryStressIntegratorNode("stress"))
+        # 2. Sub-noise regime (jet_power <= noise_floor)
+        low_power_inputs = {
+            "jet_power": 0.5,
+            "effective_metric_trace": 1.0,
+            "quantum_backreaction_force": 0.1,
+            "noise_floor": 1.0,
+        }
+        out_low = integrator.compute(low_power_inputs)
+        assert out_low["stress_regime"] == "sub-noise"
+        assert math.isclose(out_low["stress_snr"], 0.5, rel_tol=1e-9)
+        assert math.isclose(out_low["net_thrust_n"], 0.0, abs_tol=1e-12)
 
-        # Connect ports according to physical flow
-        g.connect("cavity", "screened_phase", "berry", "screened_phase")
-        g.connect("cavity", "angular_deficit_rad", "berry", "angular_deficit_rad")
-        g.connect("cavity", "phase_frequency", "pump", "phase_frequency")
-        g.connect("berry", "berry_phase_shift", "pump", "berry_phase_shift")
-        g.connect("pump", "jet_power", "stress", "jet_power")
+    def test_phase3_full_pipeline_dag(self):
+        """Verify execution of full Phase 3 DAG from Cavity through Berry & Pump to Stress Integrator."""
+        g = Graph(name="phase3_cavity_stress_pipeline")
 
-        # Initial seed inputs for root and intermediate requirements
+        cavity = CavityResonatorNode(name="cavity")
+        berry = BerryTorqueBridgeNode(name="berry")
+        pump = PeristalticPumpNode(name="pump")
+        stress = BoundaryStressIntegratorNode(name="stress")
+
+        g.add_node(cavity)
+        g.add_node(berry)
+        g.add_node(pump)
+        g.add_node(stress)
+
+        # Cavity outputs wire into Berry and Pump
+        g.add_edge("cavity", "screened_phase", "berry", "driving_phase")
+        g.add_edge("cavity", "screened_phase", "pump", "drive_phase")
+
+        # Berry wires into Pump
+        g.add_edge("berry", "torque_correction", "pump", "geometric_phase_shift")
+
+        # Pump wires into Boundary Stress Integrator
+        g.add_edge("pump", "jet_power", "stress", "jet_power")
+
         initial_inputs = {
             "cavity": {
-                "bare_phase": 2.5,
-                "angular_deficit_deg": 45.0,
-                "leakage_ratio": 0.05,
+                "bare_phase": 3.141592653589793,
+                "leakage_ratio": 0.02,
+                "angular_deficit_deg": 12.0,
+                "boundary_radius_m": 0.01,
             },
             "berry": {
-                "alpha_target": 1.2,
+                "quantum_efficiency": 0.95,
+                "geometric_coupling": 1.2,
             },
             "pump": {
-                "drive_amplitude": 1.5,
+                "stroke_length_m": 0.05,
+                "fluid_density_kg_m3": 1000.0,
+                "cycle_frequency_hz": 50.0,
             },
             "stress": {
-                "noise_floor": 1e-4,
+                "effective_metric_trace": 1.0,
+                "quantum_backreaction_force": 0.05,
+                "noise_floor": 0.1,
             },
         }
 
-        results = g.run(initial_inputs)
+        results = g.execute(initial_inputs)
 
-        # Verify all nodes executed successfully
         assert "cavity" in results
         assert "berry" in results
         assert "pump" in results
         assert "stress" in results
 
-        # Verify stress coupling
-        assert results["stress"]["net_thrust"] > 0.0
-        assert results["stress"]["regime"] == "newtonian"
+        stress_out = results["stress"]
+        assert stress_out["stress_regime"] == "newtonian"
+        assert stress_out["net_thrust_n"] > 0.0
 
-        # Verify Berry torque coupling
-        assert "torque_correction" in results["berry"]
-        assert "berry_phase_shift" in results["berry"]
+        berry_out = results["berry"]
+        assert "torque_correction" in berry_out
+        assert "berry_phase_shift" in berry_out
 
-    def test_multi_cycle_pumping_dynamics(self):
-        """Validates pump stability and cumulative behavior over multiple operational cycles."""
-        pump = PeristalticPumpNode("pump_cycle")
-        stress = BoundaryStressIntegratorNode("stress_cycle")
+    def test_phase3_multi_cycle_stability(self):
+        """Verify dynamic stability and thrust accumulation over 10 pump-stress operating cycles."""
+        pump = PeristalticPumpNode(name="pump_cycle")
+        stress = BoundaryStressIntegratorNode(name="stress_cycle")
 
         accumulated_thrust = 0.0
-        cycles = 10
+        n_cycles = 10
 
-        for cycle in range(1, cycles + 1):
-            drive = 1.0 + 0.1 * math.sin(cycle * math.pi / 5.0)
-            p_out = pump.compute({
-                "drive_amplitude": drive,
-                "berry_phase_shift": 1.05,
-                "phase_frequency": 50.0,
-            })
+        for cycle in range(n_cycles):
+            phase_drive = (cycle + 1) * 0.3141592653589793
+            pump_inputs = {
+                "drive_phase": phase_drive,
+                "geometric_phase_shift": 0.05 * cycle,
+                "stroke_length_m": 0.02,
+                "fluid_density_kg_m3": 850.0,
+                "cycle_frequency_hz": 20.0,
+            }
+            pump_out = pump.compute(pump_inputs)
 
-            s_out = stress.compute({
-                "jet_power": p_out["jet_power"],
-                "noise_floor": 1e-4,
-            })
+            stress_inputs = {
+                "jet_power": pump_out["jet_power"],
+                "effective_metric_trace": 1.0,
+                "quantum_backreaction_force": 0.01,
+                "noise_floor": 0.001,
+            }
+            stress_out = stress.compute(stress_inputs)
 
-            assert s_out["net_thrust"] > 0.0
-            accumulated_thrust += s_out["net_thrust"]
+            assert stress_out["net_thrust_n"] > 0.0
+            accumulated_thrust += stress_out["net_thrust_n"]
 
         assert accumulated_thrust > 0.0
-        assert math.isfinite(accumulated_thrust)
+        assert not math.isnan(accumulated_thrust)

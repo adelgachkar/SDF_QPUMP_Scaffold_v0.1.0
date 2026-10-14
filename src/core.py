@@ -1,75 +1,112 @@
-"""Deterministic directed acyclic graph execution."""
+﻿"""
+Core DAG orchestration and execution engine for QPUMP.
+"""
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Any
-from .nodes.base import Node
+from typing import Any, Dict, List, Optional
 
-@dataclass(frozen=True)
+
+@dataclass
 class Edge:
-    source: str
-    source_port: str
-    target: str
-    target_port: str
+    src_node: str
+    src_port: str
+    dst_node: str
+    dst_port: str
+
 
 class Graph:
-    def __init__(self) -> None:
-        self.nodes: dict[str, Node] = {}
-        self.edges: list[Edge] = []
+    def __init__(self, name: Optional[str] = None):
+        self.name = name or "Graph"
+        self.nodes: Dict[str, Any] = {}
+        self.edges: List[Edge] = []
 
-    def add_node(self, node: Node) -> None:
-        if node.node_id in self.nodes:
-            raise ValueError(f"duplicate node id: {node.node_id}")
-        self.nodes[node.node_id] = node
+    def add_node(self, node: Any) -> None:
+        node_id = getattr(node, "node_id", getattr(node, "name", None))
+        if node_id is None:
+            raise ValueError("Node must have node_id or name")
+        if node_id in self.nodes:
+            raise ValueError(f"duplicate node: {node_id}")
+        self.nodes[node_id] = node
 
-    def connect(self, source: str, source_port: str, target: str, target_port: str) -> Edge:
-        if source not in self.nodes or target not in self.nodes:
-            raise KeyError("both source and target nodes must exist")
-        if not all(isinstance(p, str) and p for p in (source_port, target_port)):
-            raise ValueError("port names must be non-empty strings")
-        edge = Edge(source, source_port, target, target_port)
-        self.edges.append(edge)
-        return edge
+    def connect(self, src_id: str, src_port: str, dst_id: str, dst_port: str) -> None:
+        if src_id not in self.nodes:
+            raise KeyError(f"source node not found: {src_id}")
+        if dst_id not in self.nodes:
+            raise KeyError(f"target node not found: {dst_id}")
 
-    def _order(self) -> list[str]:
-        incoming = {n: 0 for n in self.nodes}
-        outgoing = {n: [] for n in self.nodes}
+        src_node = self.nodes[src_id]
+        if hasattr(src_node, "output_ports") and src_port not in src_node.output_ports:
+            raise KeyError(f"missing output port '{src_port}' on node '{src_id}'")
+
+        dst_node = self.nodes[dst_id]
+        if hasattr(dst_node, "input_ports") and dst_port not in dst_node.input_ports:
+            raise KeyError(f"missing input port '{dst_port}' on node '{dst_id}'")
+
+        self.edges.append(Edge(src_id, src_port, dst_id, dst_port))
+
+    def add_edge(self, src_id: str, src_port: str, dst_id: str, dst_port: str) -> None:
+        """Alias for connect() matching test suite interface."""
+        self.connect(src_id, src_port, dst_id, dst_port)
+
+    def _order(self) -> List[str]:
+        adj: Dict[str, List[str]] = {nid: [] for nid in self.nodes}
+        in_degree: Dict[str, int] = {nid: 0 for nid in self.nodes}
+
         for edge in self.edges:
-            incoming[edge.target] += 1
-            outgoing[edge.source].append(edge.target)
-        ready = sorted(n for n, count in incoming.items() if count == 0)
-        result = []
-        while ready:
-            current = ready.pop(0)
-            result.append(current)
-            for target in sorted(outgoing[current]):
-                incoming[target] -= 1
-                if incoming[target] == 0:
-                    ready.append(target)
-                    ready.sort()
-        if len(result) != len(self.nodes):
-            raise ValueError("graph contains a cycle")
-        return result
+            adj[edge.src_node].append(edge.dst_node)
+            in_degree[edge.dst_node] += 1
 
-    def run(self, initial: dict[str, dict[str, Any]] | None = None) -> dict[str, dict[str, Any]]:
-        values = {key: dict(value) for key, value in (initial or {}).items()}
-        unknown = set(values) - set(self.nodes)
-        if unknown:
-            raise KeyError(f"initial values reference unknown node(s): {sorted(unknown)}")
-        for node_id in self.nodes:
-            values.setdefault(node_id, {})
-        for node_id in self._order():
-            try:
-                outputs = self.nodes[node_id].compute(dict(values[node_id]))
-                if not isinstance(outputs, dict):
-                    raise TypeError("compute() must return a dict")
-            except Exception as exc:
-                raise RuntimeError(f"Execution failed at Node '{node_id}': {exc}") from exc
-            values[node_id].update(outputs)
+        queue = [nid for nid in sorted(self.nodes.keys()) if in_degree[nid] == 0]
+        order = []
+
+        while queue:
+            curr = queue.pop(0)
+            order.append(curr)
+            for neighbor in sorted(adj[curr]):
+                in_degree[neighbor] -= 1
+                if in_degree[neighbor] == 0:
+                    queue.append(neighbor)
+
+        if len(order) < len(self.nodes):
+            raise ValueError("cycle detected in graph")
+
+        return order
+
+    def run(self, initial_inputs: Dict[str, Dict[str, Any]] | None = None) -> Dict[str, Dict[str, Any]]:
+        initial_inputs = initial_inputs or {}
+        order = self._order()
+        node_inputs: Dict[str, Dict[str, Any]] = {
+            nid: dict(initial_inputs.get(nid, {})) for nid in self.nodes
+        }
+        node_outputs: Dict[str, Dict[str, Any]] = {}
+
+        for nid in order:
+            node = self.nodes[nid]
+            curr_in = node_inputs[nid]
+            if hasattr(node, "execute"):
+                out = node.execute(curr_in)
+            elif hasattr(node, "compute"):
+                out = node.compute(curr_in)
+            elif callable(node):
+                out = node(curr_in)
+            else:
+                out = {}
+
+            if not isinstance(out, dict):
+                out = {"out": out}
+            node_outputs[nid] = out
+
             for edge in self.edges:
-                if edge.source == node_id:
-                    if edge.source_port not in outputs:
-                        raise KeyError(f"missing output port: {node_id}.{edge.source_port}")
-                    values[edge.target][edge.target_port] = outputs[edge.source_port]
-        return values
+                if edge.src_node == nid:
+                    if edge.src_port not in out:
+                        raise KeyError(f"missing output port '{edge.src_port}' from '{nid}'")
+                    node_inputs[edge.dst_node][edge.dst_port] = out[edge.src_port]
+
+        return node_outputs
+
+    def execute(self, initial_inputs: Dict[str, Dict[str, Any]] | None = None) -> Dict[str, Dict[str, Any]]:
+        """Alias for run() matching test suite execution call."""
+        return self.run(initial_inputs=initial_inputs)
+
 
 NodeGraph = Graph

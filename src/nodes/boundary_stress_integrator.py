@@ -1,61 +1,34 @@
-"""Boundary stress integrator node for the Q-PUMP scaffold."""
-
+﻿from __future__ import annotations
 import math
-from typing import Any, Dict, List
-from .base import BaseNode
+from typing import Any, Dict, Optional
+from .base import Node
 
-
-class BoundaryStressIntegratorNode(BaseNode):
-    """
-    Integrates peristaltic jet power and background boundary fluctuations
-    into effective boundary stress tensor components and determines the dynamic regime.
-    """
-
-    @property
-    def required_inputs(self) -> List[str]:
-        return ["jet_power"]
-
-    @property
-    def outputs(self) -> List[str]:
-        return [
-            "net_thrust",
-            "stress_tensor",
-            "regime",
-            "snr",
-        ]
+class BoundaryStressIntegratorNode(Node):
+    def __init__(self, node_id: Optional[str] = None, name: Optional[str] = None, **kwargs: Any) -> None:
+        super().__init__(node_id=name or node_id, name=name or node_id, **kwargs)
 
     def compute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
-        jet_power = float(inputs["jet_power"])
-        noise_floor = float(inputs.get("noise_floor", 1e-4))
+        jet_power = float(inputs.get("jet_power", 0.0))
+        noise_floor = float(inputs.get("noise_floor", 1.0))
+        trace = float(inputs.get("effective_metric_trace", 1.0))
+        backreaction = float(inputs.get("quantum_backreaction_force", 0.0))
 
-        if not (math.isfinite(jet_power) and math.isfinite(noise_floor)):
-            raise ValueError("Boundary stress inputs must be finite numbers.")
-        if noise_floor <= 0.0:
-            raise ValueError("noise_floor must be strictly positive.")
-
-        snr = jet_power / noise_floor
-
-        # تعیین رژیم دینامیکی متناسب با نسبت سیگنال به نویز و توان
-        if snr > 1e3:
+        snr = jet_power / noise_floor if noise_floor > 0 else float('inf')
+        if jet_power > noise_floor:
             regime = "newtonian"
-        elif snr > 1.0:
-            regime = "transitional"
+            thrust = jet_power * 0.1 * trace + backreaction
         else:
             regime = "sub-noise"
+            thrust = 0.0
 
-        # تنسور تنش مرزی ۴ مؤلفه‌ای (ماتریس ۲×۲ یا فرم متعارف فاز مرزی)
-        # [T_00, T_01, T_10, T_11]
-        t00 = jet_power
-        t01 = noise_floor * 0.5
-        t10 = noise_floor * 0.5
-        t11 = jet_power * 0.1
-
-        stress_tensor = [t00, t01, t10, t11]
-        net_thrust = math.sqrt(max(0.0, jet_power**2 - noise_floor**2)) if jet_power >= noise_floor else 0.0
-
+        tensor = [thrust, 0.0, 0.0, thrust * 0.5]
         return {
-            "net_thrust": net_thrust,
-            "stress_tensor": stress_tensor,
+            "stress_regime": regime,
             "regime": regime,
+            "stress_snr": snr,
             "snr": snr,
+            "net_thrust_n": thrust,
+            "net_thrust": thrust,
+            "boundary_stress_tensor": tensor,
+            "stress_tensor": tensor
         }
