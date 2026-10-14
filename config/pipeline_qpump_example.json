@@ -1,61 +1,65 @@
 {
   "version": "0.1.0",
-  "nodes": [
-    {
-      "id": "cavity",
+  "description": "QPUMP Closed Boundary Pipeline with Delta5 Metric Coupling",
+  "nodes": {
+    "cavity": {
       "type": "cavity_resonator",
       "params": {
         "damping": 1.0,
         "coupling": 1.0
       }
     },
-    {
-      "id": "pump",
+    "pump": {
       "type": "peristaltic_pump",
       "params": {
         "gain": 1.0
       }
     },
-    {
-      "id": "bridge",
+    "bridge": {
       "type": "berry_torque_bridge",
       "params": {
         "coupling": 0.5
       }
     },
-    {
-      "id": "stress",
+    "stress": {
       "type": "boundary_stress_integrator",
       "params": {
-        "area": 2.0
+        "area": 2.0,
+        "topological_deficit_delta5_rad": 0.1284
       }
     },
-    {
-      "id": "metric",
+    "metric": {
       "type": "effective_metric_source",
       "params": {
-        "scale": 1.0
+        "scale": 1.0,
+        "radial_distance": 1.0
       }
     }
-  ],
+  },
   "edges": [
     {
-      "source": "cavity",
-      "source_port": "cavity_intensity",
-      "target": "pump",
-      "target_port": "amplitude"
+      "from_node": "cavity",
+      "from_port": "cavity_intensity",
+      "to_node": "pump",
+      "to_port": "amplitude"
     },
     {
-      "source": "pump",
-      "source_port": "pump_thrust",
-      "target": "bridge",
-      "target_port": "phase_rate"
+      "from_node": "pump",
+      "from_port": "pump_thrust",
+      "to_node": "bridge",
+      "to_port": "phase_rate"
     },
     {
-      "source": "bridge",
-      "source_port": "berry_torque",
-      "target": "stress",
-      "target_port": "boundary_stress"
+      "from_node": "bridge",
+      "from_port": "berry_torque",
+      "to_node": "stress",
+      "to_port": "jet_power"
+    },
+    {
+      "from_node": "stress",
+      "from_port": "stress_tensor_4x4",
+      "to_node": "metric",
+      "to_port": "stress_tensor_4x4"
     }
   ]
 }

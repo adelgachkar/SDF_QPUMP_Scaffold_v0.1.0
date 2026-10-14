@@ -1,13 +1,16 @@
-"""Node abstractions and registered concrete node types for SDF QPUMP."""
+"""QPUMP Scaffold Node implementations."""
 
-from src.nodes.base import BaseNode, Node, PassthroughNode, PlaceholderNode
-from src.nodes.cavity_resonator import CavityResonatorNode
-from src.nodes.berry_torque_bridge import BerryTorqueBridgeNode
-from src.nodes.peristaltic_pump import PeristalticPumpNode
-from src.nodes.boundary_stress_integrator import BoundaryStressIntegratorNode
-from src.nodes.gravitational_curvature import GravitationalCurvatureNode
-from src.nodes.quantum_backreaction import QuantumBackreactionNode
-from src.nodes.tetrahedral_cluster import TetrahedralClusterNode, FiveTetrahedralUnionNode
+from .base import Node, BaseNode, PassthroughNode, PlaceholderNode
+from .cavity_resonator import CavityResonatorNode
+from .berry_torque_bridge import BerryTorqueBridgeNode
+from .peristaltic_pump import PeristalticPumpNode
+from .boundary_stress_integrator import BoundaryStressIntegratorNode
+from .gravitational_curvature import GravitationalCurvatureNode
+from .quantum_backreaction import QuantumBackreactionNode
+from .radial_propagation import RadialPropagationNode
+from .optical_phase_step import OpticalPhaseStepNode
+from .z_axis_filter_queue import ZAxisFilterQueueNode
+from .effective_metric_source import EffectiveMetricSourceNode
 
 __all__ = [
     "Node",
@@ -20,6 +23,8 @@ __all__ = [
     "BoundaryStressIntegratorNode",
     "GravitationalCurvatureNode",
     "QuantumBackreactionNode",
-    "TetrahedralClusterNode",
-    "FiveTetrahedralUnionNode",
+    "RadialPropagationNode",
+    "OpticalPhaseStepNode",
+    "ZAxisFilterQueueNode",
+    "EffectiveMetricSourceNode",
 ]

@@ -1,5 +1,2 @@
-"""
-SDF QPUMP Scaffold Package
-"""
-
+﻿"""SDF QPUMP Scaffold Package"""
 __version__ = "0.1.0"
