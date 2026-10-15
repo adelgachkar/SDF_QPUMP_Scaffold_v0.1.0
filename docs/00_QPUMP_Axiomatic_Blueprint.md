@@ -1,17 +1,34 @@
-# QPUMP axiomatic blueprint (scaffold)
+# QPUMP Axiomatic Blueprint: Foundational Principles and Architecture
 
-## Purpose and epistemic status
-QPUMP is organized here as a modular graph in which independently authored nodes exchange named quantities. This document is an engineering blueprint, not a claim that the proposed physics is experimentally established. The node equations in this release are deliberately raw examples.
+## 1. Executive Overview
+The QPUMP (Quantum Peristaltic Unified Modulation Pipeline) architecture models directional causal energy transport, non-equilibrium field rectification, and geometric stress integration across coupled optical/photonic cavities.
 
-## Working principles
-1. **Explicit contracts:** each node declares a stable type name and computes a mapping of named outputs from inputs.
-2. **Causal execution:** edges define data dependencies; execution is deterministic and acyclic.
-3. **Traceable assumptions:** parameters, unit conventions, and calibration status should be recorded with every model revision.
-4. **Separation of layers:** cavity response, pump conversion, Berry bridge, boundary integration, and effective-metric representation remain separate modules.
-5. **No hidden validation:** a computed value is not evidence of a physical effect; compare predictions to calibrated data and uncertainty budgets.
+---
 
-## Suggested path
-Start with a measured resonator transfer function, determine phase and amplitude conventions, calibrate pump gain and load, then test any Berry-curvature coupling independently. Derive metric mappings only after independently validated stress/geometry relations exist. Preserve raw observables alongside transformed model quantities.
+## 2. Axiom: Causal Sequential Balance and Metric Residue
 
-## Graph contract
-Each edge carries one named output to one named input. A node may have multiple upstream inputs. Cycles are rejected in this scaffold; stateful feedback requires a separately specified time-stepping interface.
+### 2.1 Statement of the Axiom
+In a closed, causally consistent physical network:
+
+1. **Energy ($\mathcal{E} \equiv \Delta \mathcal{B}$):**
+   Energy is fundamentally defined as the balance level discrepancy between two contrasting ontological states ($|\psi_A\rangle$ and $|\psi_B\rangle$) within a bounded causal partition:
+   $$\Delta \mathcal{B} \equiv \mathcal{B}(\text{State}_B) - \mathcal{B}(\text{State}_A) \equiv \mathcal{E}$$
+
+2. **Force ($\mathcal{F}$):**
+   Force is the continuous causal executive persistence of this balance discrepancy along the evolutionary parameter $\tau$:
+   $$\mathcal{F} \equiv \frac{d}{d\tau} (\Delta \mathcal{B})_{\text{causal}}$$
+
+3. **Causal State Evaporation & Geometric Scar:**
+   In the sequential causal execution of this gradient, internal microstate descriptions, operational degrees of freedom, and balance-debt residuals decohere and evaporate (are traced out). The solely conserved, macroscopic observable surviving this sequential execution is the invariant **residual metric deformation ($g^{\text{eff}}_{\mu\nu}$ or curvature scalar $R_{\text{proxy}}$)**:
+   $$\rho_{\text{residual}} = \mathrm{Tr}_{\text{internal}} \left( \rho_{AB}(\tau) \right) \implies \delta g_{\mu\nu} \propto \int \mathcal{F}_{\text{causal}} \, d\tau$$
+
+### 2.2 Ontological & Physical Rationale
+Energy and force are not primitive independent substances; they are dynamical balance adjustments within the causal ledger. Consequently, intermediate engineering units (Volts, Amperes, Watts, Newtons) are transient bookkeeping tokens. Upon execution, the debt resolves into geometry: space-time curvature is the permanent causal scar of resolved non-equilibrium balances.
+
+---
+
+## 3. Core Architectural Subsystems
+- **Peristaltic Pumping & Modulation:** Non-reciprocal phase transport.
+- **Quantum Backreaction & Zeno Dynamics:** Decoherence suppression and state pinning.
+- **Boundary Stress Integration:** Accumulation of localized energy-momentum tensor projections.
+- **Gravitational Metric Projection:** Dimensional reduction of evaporated balances into geometric curvature proxies.
