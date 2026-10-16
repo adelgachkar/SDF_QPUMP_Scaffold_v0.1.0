@@ -1,6 +1,11 @@
-"""Popcorn Vacuum Density Node for SDF-QPUMP Framework."""
+"""
+Popcorn Vacuum Density Node for SDF-QPUMP Cosmology
+Implements nucleation threshold and Hubble tension scaling.
+"""
 from dataclasses import dataclass
+from typing import Dict, Any, Union
 import numpy as np
+
 from src.nodes.base import BaseNode
 
 H0_EARLY_DEFAULT = 67.4
@@ -18,36 +23,51 @@ class PopcornVacuumConfig:
 
 
 class PopcornVacuumDensityNode(BaseNode):
-    def __init__(self, config: PopcornVacuumConfig | None = None):
-        super().__init__()
-        self.config = config or PopcornVacuumConfig()
+    def __init__(
+        self,
+        node_id: str = "popcorn_vacuum_density",
+        label: str = "Popcorn Vacuum Density",
+        config: Union[Dict[str, Any], PopcornVacuumConfig] = None,
+        **kwargs: Any,
+    ):
+        super().__init__(node_id=node_id, label=label, config=config or {}, **kwargs)
+        if isinstance(config, PopcornVacuumConfig):
+            self.cfg = config
+        else:
+            c = config or {}
+            self.cfg = PopcornVacuumConfig(
+                H0_early=float(c.get("H0_early", H0_EARLY_DEFAULT)),
+                H0_late=float(c.get("H0_late", H0_LOCAL_DEFAULT)),
+                lambda_coh_kpc=float(c.get("lambda_coh_kpc", 12.0)),
+                vacuum_energy_density=float(c.get("vacuum_energy_density", 5.35e-10)),
+            )
 
     @staticmethod
     def compute_a0(h0_value: float) -> float:
-        # H0 is given in km/s/Mpc -> convert to 1/s (SI units)
-        h0_si = (h0_value * 1000.0) / (MPC_IN_KM * 1000.0)
-        # a0 = c * H0 / (2 * pi) in m/s^2 (~ 1.04e-10 m/s^2)
-        a0 = (C_LIGHT_M_S * h0_si) / (2.0 * np.pi)
-        return float(a0)
+        """Convert H0 (km/s/Mpc) directly to critical acceleration a0 (m/s^2)."""
+        h0_si = float(h0_value) / MPC_IN_KM
+        return (C_LIGHT_M_S * h0_si) / (2.0 * np.pi)
 
-    def compute(self, inputs: dict) -> dict:
-        if not inputs or 'g_bar' not in inputs:
-            raise ValueError("Input dictionary must contain 'g_bar' array.")
+    def compute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        if "g_bar" not in inputs:
+            raise ValueError("PopcornVacuumDensityNode requires 'g_bar' in inputs.")
 
-        g_bar = np.asarray(inputs['g_bar'], dtype=float)
-        a0_early = self.compute_a0(self.config.H0_early)
-        a0_local = self.compute_a0(self.config.H0_late)
+        g_bar = np.asarray(inputs["g_bar"], dtype=float)
+        a0_early = self.compute_a0(self.cfg.H0_early)
+        a0_local = self.compute_a0(self.cfg.H0_late)
 
-        g_pop_early = np.sqrt(a0_early * g_bar)
-        g_pop_local = np.sqrt(a0_local * g_bar)
-
-        vacuum_nucleation_factor = np.sqrt(a0_local / np.maximum(g_bar, 1e-18)) * 0.5
-        vacuum_nucleation_factor = np.where(g_bar > 1e-9, 0.2, vacuum_nucleation_factor)
+        vacuum_nucleation_factor = np.sqrt(a0_local / np.maximum(g_bar, 1e-15))
+        g_pop_early = np.sqrt(np.maximum(g_bar * a0_early, 0.0))
+        g_pop_local = np.sqrt(np.maximum(g_bar * a0_local, 0.0))
 
         return {
-            'a0_early': a0_early,
-            'a0_local': a0_local,
-            'g_pop_early': g_pop_early,
-            'g_pop_local': g_pop_local,
-            'vacuum_nucleation_factor': vacuum_nucleation_factor,
+            "a0_early": float(a0_early),
+            "a0_local": float(a0_local),
+            "g_pop_early": g_pop_early.tolist() if g_pop_early.ndim > 0 else float(g_pop_early),
+            "g_pop_local": g_pop_local.tolist() if g_pop_local.ndim > 0 else float(g_pop_local),
+            "vacuum_nucleation_factor": (
+                vacuum_nucleation_factor.tolist()
+                if vacuum_nucleation_factor.ndim > 0
+                else float(vacuum_nucleation_factor)
+            ),
         }
